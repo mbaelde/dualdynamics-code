@@ -1,6 +1,6 @@
 # dualdynamics-code
 
-Code for the paper "Sensitivity mismatch and parametric resonance in primal-dual dynamics" and its extended version "Parametric Resonance in Primal-Dual Learning for Slowly Non-Stationary Constrained MDPs" (M. Baelde): the primal-dual policy/multiplier recursion of a constrained MDP under a slowly time-varying constraint, and the parametric-resonance instability that appears when the primal and dual step sizes see that drift with different sensitivity.
+Code for the paper "Sensitivity mismatch and parametric resonance in primal-dual dynamics" and its extended version "Parametric Resonance in Primal-Dual Learning for Slowly Non-Stationary Constrained MDPs" ([arXiv:2610.23788](https://arxiv.org/abs/2610.23788)) (M. Baelde): the primal-dual policy/multiplier recursion of a constrained MDP under a slowly time-varying constraint, and the parametric-resonance instability that appears when the primal and dual step sizes see that drift with different sensitivity.
 
 Two independent parts:
 
