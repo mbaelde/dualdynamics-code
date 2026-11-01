@@ -56,7 +56,9 @@ from toy_k1_parametric import floquet_exponent, natural_mode, step_matrix
 COARSE_PERIODS = np.unique(np.geomspace(8, 3000, 60).astype(int))
 
 # r = eta_lambda / eta_theta, at fixed product eta_theta * eta_lambda = 1e-4.
-CONFIGS = [(r, np.sqrt(1e-4 / r), np.sqrt(1e-4 * r)) for r in (1e-2, 1e-1, 1.0, 1e1, 1e2)]
+# 0.25 is the overdamped limit; 0.96 and 0.98 bracket the existence boundary r*.
+RATIOS = (1e-2, 1e-1, 0.25, 0.96, 0.98, 1.0, 1e1, 1e2)
+CONFIGS = [(r, np.sqrt(1e-4 / r), np.sqrt(1e-4 * r)) for r in RATIOS]
 
 EPS_MAX = 0.99  # |eps| <= 1: beyond that the sensitivity changes sign
 
@@ -117,18 +119,19 @@ def threshold_any_omega(eta_t: float, eta_l: float, hi: float = 2.0 * EPS_MAX) -
 
 def main() -> None:
     print("=== 1. Regime of the unmodulated system as a function of r = eta_lambda / eta_theta ===")
-    print(f"{'r':>8} {'eta_theta':>10} {'eta_lambda':>11} {'omega_nat':>11} {'sigma':>10} {'zeta=0.5/sqrt(r)':>17} {'4 zeta':>8}")
+    print(f"{'r':>8} {'eta_theta':>10} {'eta_lambda':>11} {'omega_nat':>11} {'sigma':>12} {'zeta=0.5/sqrt(r)':>17} {'4 zeta':>8}")
     modes = {}
     for r, eta_t, eta_l in CONFIGS:
         w_nat, _ = natural_mode(eta_t, eta_l)
         sigma = decay_rate(eta_t, eta_l)
         zeta = 0.5 / np.sqrt(r)
         modes[r] = w_nat
-        print(f"{r:8.0e} {eta_t:10.4e} {eta_l:11.4e} {w_nat:11.6f} {sigma:10.3e} {zeta:17.4g} {4 * zeta:8.4g}")
+        print(f"{r:8.4g} {eta_t:10.4e} {eta_l:11.4e} {w_nat:11.6f} {sigma:12.5e} {zeta:17.4g} {4 * zeta:8.4g}")
 
     # Overdamped (real spectrum) exactly when zeta >= 1, i.e. r <= (a/2c)^2 * 4 = 1...
     # in discrete time the boundary shifts a bit, we just check the two extremes.
     assert modes[1e-2] == 0.0, "r = 1e-2 should be overdamped (no oscillating mode)"
+    assert modes[0.25] == 0.0, "r = 0.25 should still have a real spectrum"
     assert modes[1e2] > 0.0, "r = 1e2 should be underdamped"
 
     print("\n=== 2. MAXIMAL mismatch (eps_theta = +0.99, eps_lam = -0.99) ===")
@@ -137,7 +140,7 @@ def main() -> None:
     for r, eta_t, eta_l in CONFIGS:
         e, n = max_exponent(eta_t, eta_l, eps_theta=EPS_MAX, eps_lam=-EPS_MAX)
         exps[r] = e
-        print(f"{r:8.0e} {e:+14.4e} {n:14d} {decay_rate(eta_t, eta_l):10.3e} {'UNSTABLE' if e > 0 else 'stable':>10}")
+        print(f"{r:8.4g} {e:+14.4e} {n:14d} {decay_rate(eta_t, eta_l):10.3e} {'UNSTABLE' if e > 0 else 'stable':>10}")
 
     assert exps[1e2] > 0.0, "r = 1e2 must already be unstable at maximal mismatch"
     assert exps[1e1] > 0.0, "r = 1e1 must already be unstable at maximal mismatch"
@@ -148,18 +151,23 @@ def main() -> None:
     print(f"{'r':>8} {'max exponent':>14} {'period (steps)':>14} {'verdict':>10}")
     for r, eta_t, eta_l in CONFIGS:
         e, n = max_exponent(eta_t, eta_l, eps_theta=EPS_MAX, eps_lam=EPS_MAX)
-        print(f"{r:8.0e} {e:+14.4e} {n:14d} {'UNSTABLE' if e > 0 else 'stable':>10}")
+        print(f"{r:8.4g} {e:+14.4e} {n:14d} {'UNSTABLE' if e > 0 else 'stable':>10}")
         assert e < 0.0, f"(R3) must hold at both ends of the scale, breaks at r = {r}"
 
     print("\n=== 4. Mismatch threshold, max over omega vs. reading at the tongue center ===")
     print(f"{'r':>8} {'threshold (max over omega)':>22} {'4 zeta predicted':>14} {'ratio':>8}")
+    thresholds = {}
     for r, eta_t, eta_l in CONFIGS:
         thr = threshold_any_omega(eta_t, eta_l)
+        thresholds[r] = thr
         pred = 2.0 / np.sqrt(r)
         ratio = thr / pred if np.isfinite(thr) else np.nan
-        print(f"{r:8.0e} {thr:22.4f} {pred:14.4g} {ratio:8.3f}")
+        print(f"{r:8.4g} {thr:22.4f} {pred:14.4g} {ratio:8.3f}")
         if r >= 10.0:
             assert 0.7 < ratio < 1.15, f"threshold outside tolerance of the 4 zeta prediction at r = {r}"
+
+    assert np.isnan(thresholds[0.96]), "r* must lie above 0.96: no threshold within the admissible mismatch"
+    assert np.isfinite(thresholds[0.98]), "r* must lie at or below 0.98: a threshold must exist"
 
     # At r = 1 the prediction 4 zeta = 2 coincides with the maximal admissible
     # mismatch: the true threshold (max over omega) must fall just below 2, not
